@@ -89,8 +89,9 @@ sub import {
   $_->import for qw(strict warnings utf8);
   feature->import(':5.10');
 
-  # Signatures for Perl 5.20+
-  if ($^V >= 5.020000) {
+  my %feature;
+  $feature{$_} = 1 for @_;
+  if ($feature{signatures}) {
     feature->import('signatures');
     warnings->unimport('experimental::signatures');
   }
