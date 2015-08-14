@@ -27,7 +27,10 @@ sub _ancestor {
   my ($selectors, $current, $tree, $one, $pos) = @_;
 
   while ($current = $current->[3]) {
-    return undef if $current->[0] eq 'root' || $current eq $tree;
+    return undef
+      if ($current->[0] eq 'root' || $current eq $tree)
+      && $selectors->[2][0][0] ne 'pc'
+      && $selectors->[2][0][1] ne 'scope';
     return 1 if _combinator($selectors, $current, $tree, $pos);
     last if $one;
   }
@@ -54,7 +57,7 @@ sub _combinator {
   # Selector
   return undef unless my $c = $selectors->[$pos];
   if (ref $c) {
-    return undef unless _selector($c, $current);
+    return undef unless _selector($c, $current, $tree);
     return 1 unless $c = $selectors->[++$pos];
   }
 
@@ -83,7 +86,10 @@ sub _compile {
     if ($css =~ /\G\s*,\s*/gc) { push @$group, [] }
 
     # Combinator
-    elsif ($css =~ /\G\s*([ >+~])\s*/gc) { push @$selectors, $1 }
+    elsif ($css =~ /\G\s*([ >+~])\s*/gc) {
+      push @$last, ['pc', 'scope', []] unless @$last;
+      push @$selectors, $1;
+    }
 
     # Class or ID
     elsif ($css =~ /\G([.#])((?:$ESCAPE_RE\s|\\.|[^,.#:[ >~+])+)/gco) {
@@ -142,7 +148,10 @@ sub _match {
 sub _name {qr/(?:^|:)\Q@{[_unescape(shift)]}\E$/}
 
 sub _pc {
-  my ($class, $args, $current) = @_;
+  my ($class, $args, $current, $tree) = @_;
+
+  # ":scope"
+  return $current->[0] eq 'root' || $current eq $tree if $class eq 'scope';
 
   # ":empty"
   return !grep { !_empty($_) } @$current[4 .. $#$current] if $class eq 'empty';
@@ -203,7 +212,7 @@ sub _select {
 }
 
 sub _selector {
-  my ($selector, $current) = @_;
+  my ($selector, $current, $tree) = @_;
 
   for my $s (@$selector) {
     my $type = $s->[0];
@@ -215,7 +224,9 @@ sub _selector {
     elsif ($type eq 'attr') { return undef unless _attr(@$s[1, 2], $current) }
 
     # Pseudo-class
-    elsif ($type eq 'pc') { return undef unless _pc(@$s[1, 2], $current) }
+    elsif ($type eq 'pc') {
+      return undef unless _pc(@$s[1, 2], $current, $tree);
+    }
   }
 
   return 1;
