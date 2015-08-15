@@ -29,8 +29,7 @@ sub _ancestor {
   while ($current = $current->[3]) {
     return undef
       if ($current->[0] eq 'root' || $current eq $tree)
-      && $selectors->[2][0][0] ne 'pc'
-      && $selectors->[2][0][1] ne 'scope';
+      && !_scope($selectors->[$pos]);
     return 1 if _combinator($selectors, $current, $tree, $pos);
     last if $one;
   }
@@ -194,6 +193,8 @@ sub _pc {
 
   return undef;
 }
+
+sub _scope { $_[0] && $_[0][0][0] eq 'pc' && $_[0][0][1] eq 'scope' }
 
 sub _select {
   my ($one, $tree, $group) = @_;
