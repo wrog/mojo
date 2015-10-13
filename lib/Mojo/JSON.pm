@@ -6,7 +6,7 @@ use Carp 'croak';
 use Exporter 'import';
 use JSON::PP ();
 use Mojo::Util;
-use Scalar::Util 'blessed';
+use Scalar::Util qw(blessed set_prototype);
 
 our @EXPORT_OK = qw(decode_json encode_json false from_json j to_json true);
 
@@ -33,7 +33,8 @@ sub decode_json {
 
 sub encode_json { Mojo::Util::encode 'UTF-8', _encode_value(shift) }
 
-sub false () {JSON::PP::false}
+sub false {JSON::PP::false}
+BEGIN { set_prototype \&false, '' }
 
 sub from_json {
   my $err = _decode(\my $value, shift, 1);
@@ -47,7 +48,8 @@ sub j {
 
 sub to_json { _encode_value(shift) }
 
-sub true () {JSON::PP::true}
+sub true {JSON::PP::true}
+BEGIN { set_prototype \&true, '' }
 
 sub _decode {
   my $valueref = shift;

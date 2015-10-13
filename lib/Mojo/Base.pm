@@ -88,6 +88,12 @@ sub import {
   # Mojo modules are strict!
   $_->import for qw(strict warnings utf8);
   feature->import(':5.10');
+
+  # Signatures for Perl 5.20+
+  if ($] >= 5.020) {
+    feature->import('signatures');
+    warnings->unimport('experimental::signatures');
+  }
 }
 
 sub new {
@@ -150,6 +156,7 @@ All three forms save a lot of typing.
   use warnings;
   use utf8;
   use feature ':5.10';
+  use if $] >= 5.020, experimental => 'signatures';
   use IO::Handle ();
 
   # use Mojo::Base -base;
@@ -157,6 +164,7 @@ All three forms save a lot of typing.
   use warnings;
   use utf8;
   use feature ':5.10';
+  use if $] >= 5.020, experimental => 'signatures';
   use IO::Handle ();
   use Mojo::Base;
   push @ISA, 'Mojo::Base';
@@ -167,6 +175,7 @@ All three forms save a lot of typing.
   use warnings;
   use utf8;
   use feature ':5.10';
+  use if $] >= 5.020, experimental => 'signatures';
   use IO::Handle ();
   require SomeBaseClass;
   push @ISA, 'SomeBaseClass';
