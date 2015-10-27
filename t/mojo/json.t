@@ -327,6 +327,12 @@ like encode_json({test => -sin(9**9**9)}), qr/^{"test":".*"}$/,
 # "null"
 is j('null'), undef, 'decode null';
 
+# Large integers
+is decode_json('123456789123456789123456789'), '123456789123456789123456789',
+  'decoded large positive integer to string';
+is decode_json('-123456789123456789123456789'), '-123456789123456789123456789',
+  'decoded large negative integer to string';
+
 # Errors
 eval { decode_json 'test' };
 like $@, qr/Malformed JSON: Expected string, array, object/,      'right error';

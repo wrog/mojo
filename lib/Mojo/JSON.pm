@@ -7,6 +7,7 @@ use Exporter 'import';
 use JSON::PP ();
 use Mojo::Util;
 use Scalar::Util 'blessed';
+use POSIX 'LONG_MAX';
 
 our @EXPORT_OK = qw(decode_json encode_json false from_json j to_json true);
 
@@ -191,7 +192,7 @@ sub _decode_value {
   return _decode_array() if /\G\[/gc;
 
   # Number
-  return 0 + $1
+  return abs($1) > LONG_MAX ? $1 : 0 + $1
     if /\G([-]?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?)/gc;
 
   # True
