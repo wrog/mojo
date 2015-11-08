@@ -711,34 +711,70 @@ Licensed under the MIT License, L<http://creativecommons.org/licenses/MIT>.
 Licensed under the Apache License, Version 2.0
 L<http://www.apache.org/licenses/LICENSE-2.0>.
 
+=head2 Twemoji Graphics
+
+  Copyright (C) 2014 Twitter, Inc and other contributors.
+
+Licensed under CC-BY 4.0, L<https://creativecommons.org/licenses/by/4.0/>.
+
 =head1 CODE NAMES
 
 Every major release of L<Mojolicious> has a code name, these are the ones that
 have been used in the past.
 
-6.0, C<Clinking Beer Mugs> (U+1F37B)
+=for html <p><img class="emoji" draggable="false" alt="&#x1F37B;" src="//twemoji.maxcdn.com/16x16/1f37b.png">
+6.0, <code>Clinking Beer Mugs</code> (U+1F37B)</p>
 
-5.0, C<Tiger Face> (U+1F42F)
+=for :text 6.0, C<Clinking Beer Mugs> (U+1F37B)
 
-4.0, C<Top Hat> (U+1F3A9)
+=for html <p><img class="emoji" draggable="false" alt="&#x1F42F;" src="//twemoji.maxcdn.com/16x16/1f42f.png">
+5.0, <code>Tiger Face</code> (U+1F42F)</p>
 
-3.0, C<Rainbow> (U+1F308)
+=for :text 5.0, C<Tiger Face> (U+1F42F)
 
-2.0, C<Leaf Fluttering In Wind> (U+1F343)
+=for html <p><img class="emoji" draggable="false" alt="&#x1F3A9;" src="//twemoji.maxcdn.com/16x16/1f3a9.png">
+4.0, <code>Top Hat</code> (U+1F3A9)</p>
 
-1.4, C<Smiling Face With Sunglasses> (U+1F60E)
+=for :text 4.0, C<Top Hat> (U+1F3A9)
 
-1.3, C<Tropical Drink> (U+1F379)
+=for html <p><img class="emoji" draggable="false" alt="&#x1F308;" src="//twemoji.maxcdn.com/16x16/1f308.png">
+3.0, <code>Rainbow</code> (U+1F308)</p>
 
-1.1, C<Smiling Cat Face With Heart-Shaped Eyes> (U+1F63B)
+=for :text 3.0, C<Rainbow> (U+1F308)
 
-1.0, C<Snowflake> (U+2744)
+=for html <p><img class="emoji" draggable="false" alt="&#x1F343;" src="//twemoji.maxcdn.com/16x16/1f343.png">
+2.0, <code>Leaf Fluttering In Wind</code> (U+1F343)</p>
 
-0.999930, C<Hot Beverage> (U+2615)
+=for :text 2.0, C<Leaf Fluttering In Wind> (U+1F343)
 
-0.999927, C<Comet> (U+2604)
+=for html <p><img class="emoji" draggable="false" alt="&#x1F60E;" src="//twemoji.maxcdn.com/16x16/1f60e.png">
+1.4, <code>Smiling Face With Sunglasses</code> (U+1F60E)</p>
 
-0.999920, C<Snowman> (U+2603)
+=for :text 1.4, C<Smiling Face With Sunglasses> (U+1F60E)
+
+=for html <p><img class="emoji" draggable="false" alt="&#x1F379;" src="//twemoji.maxcdn.com/16x16/1f379.png">
+1.3, <code>Tropical Drink</code> (U+1F379)</p>
+
+=for :text 1.3, C<Tropical Drink> (U+1F379)
+
+=for html <p><img class="emoji" draggable="false" alt="&#x1F63B;" src="//twemoji.maxcdn.com/16x16/1f63b.png">
+1.1, <code>Smiling Cat Face With Heart-Shaped Eyes</code> (U+1F63B)</p>
+
+=for :text 1.1, C<Smiling Cat Face With Heart-Shaped Eyes> (U+1F63B)
+
+=for html <p><img class="emoji" draggable="false" alt="&#x2744;" src="//twemoji.maxcdn.com/16x16/2744.png">
+1.0, <code>Snowflake</code> (U+2744)</p>
+
+=for :text 1.0, C<Snowflake> (U+2744)
+
+=for html <p><img class="emoji" draggable="false" alt="&#x2615;" src="//twemoji.maxcdn.com/16x16/2615.png">
+0.999930, <code>Hot Beverage</code> (U+2615)</p>
+
+=for :text 0.999930, C<Hot Beverage> (U+2615)
+
+☄ 0.999927, C<Comet> (U+2604)
+
+☃ 0.999920, C<Snowman> (U+2603)
 
 =head1 SPONSORS
 
