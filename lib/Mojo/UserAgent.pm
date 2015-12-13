@@ -77,9 +77,9 @@ sub _cleanup {
 }
 
 sub _connect {
-  my ($self, $channel, $peer, $handle, $cb) = @_;
-  my $loop = $channel->ioloop;
-  my $tx = $channel->tx;
+  my ($self, $c, $peer, $handle, $cb) = @_;
+  my $loop = $c->ioloop;
+  my $tx = $c->tx;
 
   my $t = $self->transactor;
   my ($proto, $host, $port) = $peer ? $t->peer($tx) : $t->endpoint($tx);
@@ -144,10 +144,10 @@ sub _connect_proxy {
       my $loop = $self->_loop($nb);
       my $handle = $loop->stream($id)->steal_handle;
       $self->_remove($id);
-      my $channel = Mojo::Channel::HTTP::Client->new(cb => $cb, nb => $nb, ioloop => $loop, tx => $old);
-      $id = $self->_connect($channel, 0, $handle,
+      my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, nb => $nb, ioloop => $loop, tx => $old);
+      $id = $self->_connect($c, 0, $handle,
         sub { shift->_start($nb, $old->connection($id), $cb) });
-      $self->{connections}{$id} = $channel;
+      $self->{connections}{$id} = $c;
     }
   );
 }
@@ -157,8 +157,7 @@ sub _connected {
 
   # Inactivity timeout
   my $c = $self->{connections}{$id};
-  my $stream
-    = $self->_loop($c->{nb})->stream($id)->timeout($self->inactivity_timeout);
+  my $stream = $c->ioloop->stream($id)->timeout($self->inactivity_timeout);
 
   # Store connection information in transaction
   my $tx     = $c->{tx}->connection($id);
@@ -190,10 +189,10 @@ sub _connection {
   if (my $id = $self->_connect_proxy($nb, $tx, $cb)) { return $id }
 
   # Connect
-  my $channel = Mojo::Channel::HTTP::Client->new(cb => $cb, nb => $nb, ioloop => $self->_loop($nb), tx => $tx);
-  $id = $self->_connect($channel, 1, undef, \&_connected);
+  my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, nb => $nb, ioloop => $self->_loop($nb), tx => $tx);
+  $id = $self->_connect($c, 1, undef, \&_connected);
   warn "-- Connect $id ($proto://$host:$port)\n" if DEBUG;
-  $self->{connections}{$id} = $channel;
+  $self->{connections}{$id} = $c;
 
   return $id;
 }
@@ -218,7 +217,8 @@ sub _dequeue {
 
 sub _error {
   my ($self, $id, $err) = @_;
-  my $tx = $self->{connections}{$id}{tx};
+  my $c = $self->{connections}{$id};
+  my $tx = $c ? $c->tx : undef;
   $tx->res->error({message => $err}) if $tx;
   $self->_finish($id, 1);
 }
@@ -228,8 +228,7 @@ sub _finish {
 
   # Remove request timeout
   return unless my $c = $self->{connections}{$id};
-  my $loop = $self->_loop($c->{nb});
-  $loop->remove($c->{timeout}) if $c->{timeout};
+  $c->ioloop->remove($c->{timeout}) if $c->{timeout};
 
   return $self->_reuse($id, $close) unless my $old = $c->{tx};
   $old->client_close($close);
@@ -279,7 +278,7 @@ sub _remove {
   my ($self, $id) = @_;
   my $c = delete $self->{connections}{$id};
   $self->_dequeue($c->{nb}, $id);
-  $self->_loop($c->{nb})->remove($id);
+  $c->ioloop->remove($id);
 }
 
 sub _reuse {
@@ -333,7 +332,7 @@ sub _write {
   my $chunk = $tx->client_write;
   delete $c->{writing};
   warn term_escape "-- Client >>> Server (@{[_url($tx)]})\n$chunk\n" if DEBUG;
-  my $stream = $self->_loop($c->{nb})->stream($id)->write($chunk);
+  my $stream = $c->ioloop->stream($id)->write($chunk);
   $self->_finish($id) if $tx->is_finished;
 
   # Continue writing
