@@ -72,7 +72,8 @@ sub websocket {
 sub _cleanup {
   my $self = shift;
   delete $self->{pid};
-  $self->_finish($_, 1) for keys %{$self->{connections} || {}};
+  my $connections = $self->{connections} || {};
+  $self->_finish($_, 1) for keys %$connections;
   return $self;
 }
 
@@ -144,7 +145,7 @@ sub _connect_proxy {
       my $loop = $self->_loop($nb);
       my $handle = $loop->stream($id)->steal_handle;
       $self->_remove($id);
-      my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, nb => $nb, ioloop => $loop, tx => $old);
+      my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, ioloop => $loop, tx => $old);
       $id = $self->_connect($c, 0, $handle,
         sub { shift->_start($nb, $old->connection($id), $cb) });
       $self->{connections}{$id} = $c;
@@ -173,10 +174,11 @@ sub _connected {
 
 sub _connection {
   my ($self, $nb, $tx, $cb) = @_;
+  my $loop = $self->_loop($nb);
 
   # Reuse connection
   my ($proto, $host, $port) = $self->transactor->endpoint($tx);
-  my $id = $tx->connection || $self->_dequeue($nb, "$proto:$host:$port", 1);
+  my $id = $tx->connection || $self->_dequeue($loop, "$proto:$host:$port", 1);
   if ($id) {
     warn "-- Reusing connection $id ($proto://$host:$port)\n" if DEBUG;
     @{$self->{connections}{$id}}{qw(cb tx)} = ($cb, $tx);
@@ -189,7 +191,7 @@ sub _connection {
   if (my $id = $self->_connect_proxy($nb, $tx, $cb)) { return $id }
 
   # Connect
-  my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, nb => $nb, ioloop => $self->_loop($nb), tx => $tx);
+  my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, ioloop => $loop, tx => $tx);
   $id = $self->_connect($c, 1, undef, \&_connected);
   warn "-- Connect $id ($proto://$host:$port)\n" if DEBUG;
   $self->{connections}{$id} = $c;
@@ -198,10 +200,9 @@ sub _connection {
 }
 
 sub _dequeue {
-  my ($self, $nb, $name, $test) = @_;
+  my ($self, $loop, $name, $test) = @_;
 
-  my $loop = $self->_loop($nb);
-  my $old = $self->{$nb ? 'nb_queue' : 'queue'} ||= [];
+  my $old = $self->{queue}{$loop} ||= [];
   my ($found, @new);
   for my $queued (@$old) {
     push @new, $queued and next if $found || !grep { $_ eq $name } @$queued;
@@ -253,6 +254,8 @@ sub _finish {
 
 sub _loop { $_[1] ? Mojo::IOLoop->singleton : $_[0]->ioloop }
 
+sub _nb { $_[1] ? ($_[1]->ioloop == Mojo::IOLoop->singleton) : undef }
+
 sub _read {
   my ($self, $id, $chunk) = @_;
 
@@ -271,13 +274,13 @@ sub _redirect {
   my ($self, $c, $old) = @_;
   return undef unless my $new = $self->transactor->redirect($old);
   return undef unless @{$old->redirects} < $self->max_redirects;
-  return $self->_start($c->{nb}, $new, delete $c->{cb});
+  return $self->_start($self->_nb($c), $new, delete $c->{cb});
 }
 
 sub _remove {
   my ($self, $id) = @_;
   my $c = delete $self->{connections}{$id};
-  $self->_dequeue($c->{nb}, $id);
+  $self->_dequeue($c->ioloop, $id);
   $c->ioloop->remove($id);
 }
 
@@ -292,7 +295,7 @@ sub _reuse {
     if $close || !$tx || !$max || !$tx->keep_alive || $tx->error;
 
   # Keep connection alive
-  my $queue = $self->{$c->{nb} ? 'nb_queue' : 'queue'} ||= [];
+  my $queue = $self->{queue}{$c->ioloop} ||= [];
   $self->_remove(shift(@$queue)->[1]) while @$queue && @$queue >= $max;
   push @$queue, [join(':', $self->transactor->endpoint($tx)), $id];
 }
@@ -313,7 +316,8 @@ sub _start {
   my $id = $self->emit(start => $tx)->_connection($nb, $tx, $cb);
   if (my $timeout = $self->request_timeout) {
     weaken $self;
-    $self->{connections}{$id}{timeout} = $self->_loop($nb)
+    my $c = $self->{connections}{$id};
+    $c->{timeout} = $c->ioloop
       ->timer($timeout => sub { $self->_error($id, 'Request timeout') });
   }
 
