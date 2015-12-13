@@ -3,6 +3,7 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 # "Fry: Since when is the Internet about robbing people of their privacy?
 #  Bender: August 6, 1991."
+use Mojo::Channel::HTTP::Client;
 use Mojo::IOLoop;
 use Mojo::Util qw(monkey_patch term_escape);
 use Mojo::UserAgent::CookieJar;
@@ -76,7 +77,9 @@ sub _cleanup {
 }
 
 sub _connect {
-  my ($self, $nb, $peer, $tx, $handle, $cb) = @_;
+  my ($self, $channel, $peer, $handle, $cb) = @_;
+  my $loop = $channel->ioloop;
+  my $tx = $channel->tx;
 
   my $t = $self->transactor;
   my ($proto, $host, $port) = $peer ? $t->peer($tx) : $t->endpoint($tx);
@@ -99,7 +102,7 @@ sub _connect {
 
   weaken $self;
   my $id;
-  return $id = $self->_loop($nb)->client(
+  return $id = $loop->client(
     %options => sub {
       my ($loop, $err, $stream) = @_;
 
@@ -138,11 +141,13 @@ sub _connect_proxy {
         unless $tx->req->url->protocol eq 'https';
 
       # TLS upgrade
-      my $handle = $self->_loop($nb)->stream($id)->steal_handle;
+      my $loop = $self->_loop($nb);
+      my $handle = $loop->stream($id)->steal_handle;
       $self->_remove($id);
-      $id = $self->_connect($nb, 0, $old, $handle,
+      my $channel = Mojo::Channel::HTTP::Client->new(cb => $cb, nb => $nb, ioloop => $loop, tx => $old);
+      $id = $self->_connect($channel, 0, $handle,
         sub { shift->_start($nb, $old->connection($id), $cb) });
-      $self->{connections}{$id} = {cb => $cb, nb => $nb, tx => $old};
+      $self->{connections}{$id} = $channel;
     }
   );
 }
@@ -185,9 +190,10 @@ sub _connection {
   if (my $id = $self->_connect_proxy($nb, $tx, $cb)) { return $id }
 
   # Connect
-  $id = $self->_connect($nb, 1, $tx, undef, \&_connected);
+  my $channel = Mojo::Channel::HTTP::Client->new(cb => $cb, nb => $nb, ioloop => $self->_loop($nb), tx => $tx);
+  $id = $self->_connect($channel, 1, undef, \&_connected);
   warn "-- Connect $id ($proto://$host:$port)\n" if DEBUG;
-  $self->{connections}{$id} = {cb => $cb, nb => $nb, tx => $tx};
+  $self->{connections}{$id} = $channel;
 
   return $id;
 }
