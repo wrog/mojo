@@ -250,8 +250,6 @@ sub _finish {
   $c->{cb}($self, $old) unless $self->_redirect($c, $old);
 }
 
-sub _loop { $_[1] ? Mojo::IOLoop->singleton : $_[0]->ioloop }
-
 sub _read {
   my ($self, $id, $chunk) = @_;
 
