@@ -52,12 +52,12 @@ sub start {
   # Non-blocking
   if ($cb) {
     warn "-- Non-blocking request (@{[_url($tx)]})\n" if DEBUG;
-    return $self->_start(1, $tx, $cb);
+    return $self->_start(Mojo::IOLoop->singleton, $tx, $cb);
   }
 
   # Blocking
   warn "-- Blocking request (@{[_url($tx)]})\n" if DEBUG;
-  $self->_start(0, $tx => sub { shift->ioloop->stop; $tx = shift });
+  $self->_start($self->ioloop, $tx => sub { shift->ioloop->stop; $tx = shift });
   $self->ioloop->start;
 
   return $tx;
@@ -122,12 +122,13 @@ sub _connect {
 }
 
 sub _connect_proxy {
-  my ($self, $nb, $old, $cb) = @_;
+  my ($self, $loop, $old, $cb) = @_;
 
   # Start CONNECT request
   return undef unless my $new = $self->transactor->proxy_connect($old);
+  #Scalar::Util::weaken $loop;
   return $self->_start(
-    ($nb, $new) => sub {
+    ($loop, $new) => sub {
       my ($self, $tx) = @_;
 
       # CONNECT failed (connection needs to be kept alive)
@@ -138,16 +139,15 @@ sub _connect_proxy {
       # Start real transaction
       $old->req->via_proxy(0);
       my $id = $tx->connection;
-      return $self->_start($nb, $old->connection($id), $cb)
+      return $self->_start($loop, $old->connection($id), $cb)
         unless $tx->req->url->protocol eq 'https';
 
       # TLS upgrade
-      my $loop = $self->_loop($nb);
       my $handle = $loop->stream($id)->steal_handle;
       $self->_remove($id);
       my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, ioloop => $loop, tx => $old);
       $id = $self->_connect($c, 0, $handle,
-        sub { shift->_start($nb, $old->connection($id), $cb) });
+        sub { shift->_start($loop, $old->connection($id), $cb) });
       $self->{connections}{$id} = $c;
     }
   );
@@ -173,8 +173,7 @@ sub _connected {
 }
 
 sub _connection {
-  my ($self, $nb, $tx, $cb) = @_;
-  my $loop = $self->_loop($nb);
+  my ($self, $loop, $tx, $cb) = @_;
 
   # Reuse connection
   my ($proto, $host, $port) = $self->transactor->endpoint($tx);
@@ -188,7 +187,7 @@ sub _connection {
   }
 
   # CONNECT request to proxy required
-  if (my $id = $self->_connect_proxy($nb, $tx, $cb)) { return $id }
+  if (my $id = $self->_connect_proxy($loop, $tx, $cb)) { return $id }
 
   # Connect
   my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, ioloop => $loop, tx => $tx);
@@ -254,8 +253,6 @@ sub _finish {
 
 sub _loop { $_[1] ? Mojo::IOLoop->singleton : $_[0]->ioloop }
 
-sub _nb { $_[1] ? ($_[1]->ioloop == Mojo::IOLoop->singleton) : undef }
-
 sub _read {
   my ($self, $id, $chunk) = @_;
 
@@ -274,7 +271,7 @@ sub _redirect {
   my ($self, $c, $old) = @_;
   return undef unless my $new = $self->transactor->redirect($old);
   return undef unless @{$old->redirects} < $self->max_redirects;
-  return $self->_start($self->_nb($c), $new, delete $c->{cb});
+  return $self->_start($c->ioloop, $new, delete $c->{cb});
 }
 
 sub _remove {
@@ -301,19 +298,19 @@ sub _reuse {
 }
 
 sub _start {
-  my ($self, $nb, $tx, $cb) = @_;
+  my ($self, $loop, $tx, $cb) = @_;
 
   # Application server
   my $url = $tx->req->url;
   unless ($url->is_abs) {
-    my $base = $nb ? $self->server->nb_url : $self->server->url;
+    my $base = $loop == Mojo::IOLoop->singleton ? $self->server->nb_url : $self->server->url;
     $url->scheme($base->scheme)->authority($base->authority);
   }
 
   $_->prepare($tx) for $self->proxy, $self->cookie_jar;
 
   # Connect and add request timeout if necessary
-  my $id = $self->emit(start => $tx)->_connection($nb, $tx, $cb);
+  my $id = $self->emit(start => $tx)->_connection($loop, $tx, $cb);
   if (my $timeout = $self->request_timeout) {
     weaken $self;
     my $c = $self->{connections}{$id};
