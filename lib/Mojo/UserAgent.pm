@@ -125,7 +125,6 @@ sub _connect_proxy {
 
   # Start CONNECT request
   return undef unless my $new = $self->transactor->proxy_connect($old);
-  #Scalar::Util::weaken $loop;
   return $self->_start(
     ($loop, $new) => sub {
       my ($self, $tx) = @_;
@@ -160,7 +159,7 @@ sub _connected {
   my $stream = $c->ioloop->stream($id)->timeout($self->inactivity_timeout);
 
   # Store connection information in transaction
-  my $tx     = $c->{tx}->connection($id);
+  my $tx     = $c->tx->connection($id);
   my $handle = $stream->handle;
   $tx->local_address($handle->sockhost)->local_port($handle->sockport);
   $tx->remote_address($handle->peerhost)->remote_port($handle->peerport);
@@ -229,7 +228,7 @@ sub _finish {
   return unless my $c = $self->{connections}{$id};
   $c->ioloop->remove($c->{timeout}) if $c->{timeout};
 
-  return $self->_reuse($id, $close) unless my $old = $c->{tx};
+  return $self->_reuse($id, $close) unless my $old = $c->tx;
   $old->client_close($close);
 
   # Finish WebSocket
@@ -241,7 +240,7 @@ sub _finish {
   if (my $new = $self->transactor->upgrade($old)) {
     weaken $self;
     $new->on(resume => sub { $self->_write($id) });
-    $c->{cb}($self, $c->{tx} = $new);
+    $c->{cb}($self, $c->tx($new)->tx);
     return $new->client_read($old->res->content->leftovers);
   }
 
@@ -255,7 +254,7 @@ sub _read {
 
   # Corrupted connection
   return                     unless my $c  = $self->{connections}{$id};
-  return $self->_remove($id) unless my $tx = $c->{tx};
+  return $self->_remove($id) unless my $tx = $c->tx;
 
   # Process incoming data
   warn term_escape "-- Client <<< Server (@{[_url($tx)]})\n$chunk\n" if DEBUG;
@@ -325,7 +324,7 @@ sub _write {
 
   # Get and write chunk
   return unless my $c  = $self->{connections}{$id};
-  return unless my $tx = $c->{tx};
+  return unless my $tx = $c->tx;
   return if !$tx->is_writing || $c->{writing}++;
   my $chunk = $tx->client_write;
   delete $c->{writing};
