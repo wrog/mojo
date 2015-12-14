@@ -146,6 +146,8 @@ sub _connect_proxy {
       my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, ioloop => $loop, tx => $old);
       $id = $self->_connect($c, 0, $handle,
         sub { shift->_start($loop, $old->connection($id), $cb) });
+      weaken $self;
+      $c->on(finished => sub { $self->_finish($id) });
       $self->{connections}{$id} = $c;
     }
   );
@@ -190,6 +192,8 @@ sub _connection {
   # Connect
   my $c = Mojo::Channel::HTTP::Client->new(cb => $cb, ioloop => $loop, tx => $tx);
   $id = $self->_connect($c, 1, undef, \&_connected);
+  weaken $self;
+  $c->on(finished => sub { $self->_finish($id) });
   warn "-- Connect $id ($proto://$host:$port)\n" if DEBUG;
   $self->{connections}{$id} = $c;
 
@@ -257,10 +261,7 @@ sub _read {
   return $self->_remove($id) unless my $tx = $c->tx;
 
   # Process incoming data
-  warn term_escape "-- Client <<< Server (@{[_url($tx)]})\n$chunk\n" if DEBUG;
-  $tx->client_read($chunk);
-  if    ($tx->is_finished) { $self->_finish($id) }
-  elsif ($tx->is_writing)  { $c->write($id) }
+  $c->read($id, $chunk);
 }
 
 sub _redirect {
@@ -282,7 +283,8 @@ sub _reuse {
 
   # Connection close
   my $c   = $self->{connections}{$id};
-  my $tx  = delete $c->{tx};
+  my $tx  = $c->tx;
+  $c->tx(undef);
   my $max = $self->max_connections;
   return $self->_remove($id)
     if $close || !$tx || !$max || !$tx->keep_alive || $tx->error;
@@ -313,7 +315,6 @@ sub _start {
     $c->{timeout} = $c->ioloop
       ->timer($timeout => sub { $self->_error($id, 'Request timeout') });
   }
-  $c->on(finish => sub { $self->_finish($id) });
 
   return $id;
 }

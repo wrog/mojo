@@ -9,6 +9,17 @@ use constant DEBUG => $ENV{MOJO_USERAGENT_DEBUG};
 
 has [qw/ioloop tx/];
 
+sub read {
+  my ($self, $id, $chunk) = @_;
+  return unless my $tx = $self->tx;
+
+  # Process incoming data
+  warn term_escape "-- Client <<< Server (@{[_url($tx)]})\n$chunk\n" if DEBUG;
+  $tx->client_read($chunk);
+  if    ($tx->is_finished) { $self->emit(finished => $id) }
+  elsif ($tx->is_writing)  { $self->write($id) }
+}
+
 sub write {
   my ($self, $id) = @_;
   return unless my $tx = $self->tx;
