@@ -10,25 +10,10 @@ has [
 has req => sub { Mojo::Message::Request->new };
 has res => sub { Mojo::Message::Response->new };
 
-sub client_close {
-  my ($self, $close) = @_;
-
-  # Premature connection close
-  my $res = $self->res->finish;
-  if ($close && !$res->code && !$res->error) {
-    $res->error({message => 'Premature connection close'});
-  }
-
-  # 4xx/5xx
-  elsif ($res->is_status_class(400) || $res->is_status_class(500)) {
-    $res->error({message => $res->message, code => $res->code});
-  }
-
-  $self->server_close;
-}
-
 sub client_read  { croak 'Method "client_read" not implemented by subclass' }
 sub client_write { croak 'Method "client_write" not implemented by subclass' }
+
+sub close { shift->_state(qw(finished finish)) }
 
 sub connection {
   my $self = shift;

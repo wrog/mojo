@@ -3,8 +3,6 @@ use Mojo::Base 'Mojo::Transaction';
 
 has [qw(next previous)];
 
-sub client_write { shift->_write(0) }
-
 sub is_empty { !!(uc $_[0]->req->method eq 'HEAD' || $_[0]->res->is_empty) }
 
 sub keep_alive {
