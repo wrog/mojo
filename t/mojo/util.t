@@ -12,12 +12,11 @@ use Mojo::DeprecationTest;
 
 use Mojo::Util
   qw(b64_decode b64_encode camelize class_to_file class_to_path decamelize),
-  qw(decode deprecated dumper encode epoch_to_datetime hmac_sha1_sum),
-  qw(html_unescape md5_bytes md5_sum monkey_patch punycode_decode),
-  qw(punycode_encode quote secure_compare sha1_bytes sha1_sum slurp),
-  qw(split_cookie_header split_header spurt squish steady_time tablify),
-  qw(term_escape trim unindent unquote url_escape url_unescape xml_escape),
-  qw(xor_encode);
+  qw(decode dumper encode hmac_sha1_sum html_unescape md5_bytes md5_sum),
+  qw(monkey_patch punycode_decode punycode_encode quote secure_compare),
+  qw(secure_compare sha1_bytes sha1_sum slurp split_cookie_header),
+  qw(split_header spurt squish steady_time tablify term_escape trim unindent),
+  qw(unquote url_escape url_unescape xml_escape xor_encode);
 
 # camelize
 is camelize('foo_bar_baz'), 'FooBarBaz', 'right camelized result';
@@ -164,14 +163,6 @@ is decode('does_not_exist', ''), undef, 'decoding with invalid encoding worked';
 # encode (invalid encoding)
 eval { encode('does_not_exist', '') };
 like $@, qr/Unknown encoding 'does_not_exist'/, 'right error';
-
-# epoch_to_datetime
-is epoch_to_datetime(1408567500), '2014-08-20T20:45:00Z',
-  'epoch_to_datetime 1408567500';
-like epoch_to_datetime(Time::HiRes::time),
-  qr/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z$/, 'epoch_to_datetime hires';
-like epoch_to_datetime(), qr/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/,
-  'epoch_to_datetime now';
 
 # url_escape
 is url_escape('business;23'), 'business%3B23', 'right URL escaped result';

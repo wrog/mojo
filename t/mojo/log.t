@@ -15,9 +15,14 @@ $log->fatal('I ♥ Mojolicious');
 $log->debug('Does not work');
 undef $log;
 my $content = decode 'UTF-8', slurp($path);
-like $content,   qr/\[.*\] \[error\] Just works/,        'right error message';
-like $content,   qr/\[.*\] \[fatal\] I ♥ Mojolicious/, 'right fatal message';
-unlike $content, qr/\[.*\] \[debug\] Does not work/,     'no debug message';
+like $content, qr/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] \[error\] Just works/,
+  'right error message';
+like $content,
+  qr/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] \[fatal\] I ♥ Mojolicious/,
+  'right fatal message';
+unlike $content,
+  qr/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\] \[debug\] Does not work/,
+  'no debug message';
 
 # Logging to STDERR
 my $buffer = '';

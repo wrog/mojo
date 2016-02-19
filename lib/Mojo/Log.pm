@@ -3,7 +3,7 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp 'croak';
 use Fcntl ':flock';
-use Mojo::Util qw(epoch_to_datetime deprecated encode monkey_patch);
+use Mojo::Util qw(deprecated encode monkey_patch);
 
 has format => sub { \&_format };
 has handle => sub {
@@ -56,7 +56,9 @@ sub new {
 sub warn { shift->_log(warn => @_) }
 
 sub _format {
-  '[' . epoch_to_datetime(shift) . '] [' . shift() . '] ' . join "\n", @_, '';
+  my ($s, $m, $h, $day, $month, $year) = localtime(shift);
+  sprintf '[%04d-%02d-%02dT%02d:%02d:%02d] [%s] %s', $year + 1900, $month + 1,
+    $day, $h, $m, $s, shift(@_), join "\n", @_, '';
 }
 
 sub _log { shift->emit('message', shift, @_) }
