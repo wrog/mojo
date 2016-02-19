@@ -2,6 +2,7 @@ package Mojo::Date;
 use Mojo::Base -base;
 use overload bool => sub {1}, '""' => sub { shift->to_string }, fallback => 1;
 
+use Mojo::Util 'epoch_to_datetime';
 use Time::Local 'timegm';
 
 has epoch => sub {time};
@@ -52,14 +53,7 @@ sub parse {
     (defined $epoch && ($epoch += $offset) >= 0) ? $epoch : undef);
 }
 
-sub to_datetime {
-
-  # RFC 3339 (1994-11-06T08:49:37Z)
-  my ($s, $m, $h, $day, $month, $year) = gmtime(my $epoch = shift->epoch);
-  my $str = sprintf '%04d-%02d-%02dT%02d:%02d:%02d', $year + 1900, $month + 1,
-    $day, $h, $m, $s;
-  return $str . ($epoch =~ /(\.\d+)$/ ? "$1Z" : 'Z');
-}
+sub to_datetime { epoch_to_datetime(shift->epoch) }
 
 sub to_string {
 

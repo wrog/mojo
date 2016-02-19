@@ -53,11 +53,12 @@ my %CACHE;
 
 our @EXPORT_OK = (
   qw(b64_decode b64_encode camelize class_to_file class_to_path decamelize),
-  qw(decode deprecated dumper encode hmac_sha1_sum html_unescape md5_bytes),
-  qw(md5_sum monkey_patch punycode_decode punycode_encode quote),
-  qw(secure_compare sha1_bytes sha1_sum slurp split_cookie_header),
-  qw(split_header spurt squish steady_time tablify term_escape trim unindent),
-  qw(unquote url_escape url_unescape xml_escape xor_encode)
+  qw(decode deprecated dumper encode epoch_to_datetime hmac_sha1_sum),
+  qw(html_unescape md5_bytes md5_sum monkey_patch punycode_decode),
+  qw(punycode_encode quote secure_compare sha1_bytes sha1_sum slurp),
+  qw(split_cookie_header split_header spurt squish steady_time tablify),
+  qw(term_escape trim unindent unquote url_escape url_unescape xml_escape),
+  qw(xor_encode)
 );
 
 # DEPRECATED in Clinking Beer Mugs!
@@ -112,6 +113,12 @@ sub dumper {
 }
 
 sub encode { _encoding($_[0])->encode("$_[1]") }
+
+sub epoch_to_datetime {
+  my ($s, $m, $h, $day, $month, $year) = gmtime(my $epoch = shift);
+  return sprintf '%04d-%02d-%02dT%02d:%02d:%02d%s', $year + 1900, $month + 1,
+    $day, $h, $m, $s, ($epoch && $epoch =~ /(\.\d+)$/ ? "$1Z" : 'Z');
+}
 
 sub hmac_sha1_sum { hmac_sha1_hex @_ }
 
@@ -575,6 +582,17 @@ Dump a Perl data structure with L<Data::Dumper>.
   my $bytes = encode 'UTF-8', $chars;
 
 Encode characters to bytes.
+
+=head2 epoch_to_datetime
+
+  my $str = epoch_to_datetime($epoch);
+  my $str = epoch_to_datetime;
+
+Converts an epoch time to a RFC 3339 datetime string. The epoch timestamp
+defaults to "now".
+
+  # "1994-11-06T08:49:37Z".
+  epoch_to_datetime 784111777;
 
 =head2 hmac_sha1_sum
 
