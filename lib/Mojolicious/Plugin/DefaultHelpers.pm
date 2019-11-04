@@ -185,7 +185,7 @@ sub _proxy_start_p {
   my ($c, $source_tx) = @_;
   my $tx = $c->render_later->tx;
 
-  my $promise = Mojo::Promise->new;
+  my $promise;
   $source_tx->res->content->auto_upgrade(0)->auto_decompress(0)->once(
     body => sub {
       my $source_content = shift;
@@ -221,9 +221,7 @@ sub _proxy_start_p {
   weaken $source_tx;
   $source_tx->once(finish => sub { $promise->reject(_tx_error(@_)) });
 
-  $c->ua->start_p($source_tx);
-
-  return $promise;
+  return $promise = $c->ua->start_p($source_tx)->clone;
 }
 
 sub _redirect_to {
